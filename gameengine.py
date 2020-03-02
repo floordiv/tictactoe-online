@@ -1,5 +1,9 @@
 import socket
 import platform
+from os import system
+
+
+cls = 'cls' if platform.system().lower() == 'windows' else 'clear'
 
 
 class network:
@@ -13,7 +17,7 @@ def start_client(server='127.0.0.1:8083'):
     ip, port = server.split(':')
     # sock.bind((ip, int(port)))
     sock.connect((ip, int(port)))
-    sock.send(bytes(f'connection: {platform.system()}, {platform.platform()}, {platform.processor()}'))
+    sock.send(bytes(f'connection: {platform.system()}, {platform.platform()}, {platform.processor()}'.encode('utf-8')))
     network.sock_obj = sock
     network.player_symbol = repr(sock.recv(1024))
     return sock
@@ -34,6 +38,7 @@ def move(coord):
 
 
 def draw():
+    system(cls)
     print('-' * 13)
     for i in range(9):  # lines
         if i % 3 == 0 and i not in [0, 1]:  # new line
