@@ -1,4 +1,5 @@
 import socket
+from time import sleep
 
 
 class network:
@@ -21,6 +22,7 @@ def start(on_port=8083):
             network.players += [['x', 'o'][i]]
             network.players_sock_objs += [conn]
             conn.send(bytes(['x', 'o'][i].encode('utf-8')))
+        sleep(0.5)
         sock.sendall(b'starting')
         while True:
             for i in range(2):

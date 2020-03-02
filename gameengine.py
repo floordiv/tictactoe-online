@@ -10,6 +10,15 @@ class network:
     sock_obj = None
     players_table = [i for i in range(1, 10)]
     player_symbol = 'x'
+    data = ''
+
+
+def listen_client():
+    if network.sock_obj is None:
+        print('[WARNING] Client was not started!')
+        start_client()
+    while True:
+        network.data = repr(network.sock_obj.recv(1024))
 
 
 def start_client(server='127.0.0.1:8083'):
@@ -33,7 +42,7 @@ def move(coord):
     else:
         return False
     send_data(coord)
-    network.players_table = [int(i) for i in repr(network.sock_obj.recv(1024)).split(';')]
+    network.players_table = [int(i) for i in network.data.split(';')]
     draw()
 
 

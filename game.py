@@ -1,18 +1,23 @@
 import gameengine as ge
+from threading import Thread
+from time import sleep
 
 
-# ge.draw()
+client_listener = Thread(target=ge.listen_client)
+
+
 ge.start_client()
 print('Waiting for second player...')
-server_answer = repr(ge.network.sock_obj.recv(1024))
-if server_answer == 'starting':
-    print('Starting the game!')
+server_answer = ge.network.data
+while server_answer != 'starting':
+    sleep(0.3)
+print('Starting the game!')
 ge.draw()
 
 stop = False
 
 while not stop:
-    data = repr(ge.network.sock_obj.recv(1024))
+    data = ge.network.data
 
     if data == 'your-move':
         ge.draw()
