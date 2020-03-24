@@ -3,20 +3,21 @@ from threading import Thread
 from time import sleep
 
 
-client_listener = Thread(target=ge.listen_client)
-
-
 ge.start_client()
-print('Waiting for second player...')
-server_answer = ge.network.data
-while server_answer != 'starting':
+
+client_listener = Thread(target=ge.listen_client).start()
+
+print('Waiting for connecting...')
+
+while ge.network.data != 'starting':
+
     sleep(0.3)
+
 print('Starting the game!')
 ge.draw()
 
-stop = False
 
-while not stop:
+while True:
     data = ge.network.data
 
     if data == 'your-move':
@@ -26,8 +27,10 @@ while not stop:
             move = input('> ')
     if data == 'game-over':
         print('Game over!')
+        break
     if data == 'server-stop':
         print('Host broke down the connection')
+        break
 
 
 

@@ -1,5 +1,6 @@
 import socket
 from time import sleep
+from traceback import format_exc
 
 
 class network:
@@ -22,7 +23,6 @@ def start(on_port=8083):
             network.players += [['x', 'o'][i]]
             network.players_sock_objs += [conn]
             conn.send(bytes(['x', 'o'][i].encode('utf-8')))
-        sleep(0.5)
         sock.sendall(b'starting')
         while True:
             for i in range(2):
@@ -40,8 +40,13 @@ def start(on_port=8083):
                     else:
                         print(f'[ERROR] Received corrupted packet from {client}: {data}')
                 network.sock_obj.sendall(bytes(';'.join([str(i) for i in network.players_table]).encode('utf-8')))
-    except KeyboardInterrupt:
-        sock.sendall(b'server-stop')
+    except:
+        # print(format_exc())
+        try:
+            sock.sendall(b'server-stop')
+        except:
+            pass
+        print('Closing socket...')
         sock.close()
 
 
