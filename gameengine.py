@@ -18,7 +18,8 @@ def listen_client():
         print('[WARNING] Client was not started!')
         start_client()
     while True:
-        network.data = repr(network.sock_obj.recv(1024))
+        network.data = repr(network.sock_obj.recv(1024))[2:-1]
+        print(network.data, True)
 
 
 def start_client(server='127.0.0.1:8083'):
@@ -26,9 +27,10 @@ def start_client(server='127.0.0.1:8083'):
     ip, port = server.split(':')
     # sock.bind((ip, int(port)))
     sock.connect((ip, int(port)))
-    sock.send(bytes(f'connection: {platform.system()}, {platform.platform()}, {platform.processor()}'.encode('utf-8')))
+    sock.send(bytes(f'client information: {platform.system()}, {platform.platform()}, {platform.processor()}'.encode('utf-8')))
     network.sock_obj = sock
     network.player_symbol = repr(sock.recv(1024))
+
     return sock
 
 
