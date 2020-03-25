@@ -1,6 +1,7 @@
 import gameengine as ge
 from threading import Thread
 from time import sleep
+from os import abort
 
 
 try:
@@ -11,11 +12,10 @@ except ConnectionRefusedError:
 
 client_listener = Thread(target=ge.listen_client).start()
 
-print('Waiting for connecting...')
+print('Waiting for connecting second player...')
 
 try:
-    while ge.network.data != 'starting':
-
+    while ge.network.data not in ['starting', 'your-move']:
         sleep(0.3)
 
     print('Starting the game!')
@@ -24,23 +24,20 @@ try:
     while True:
         data = ge.network.data
 
-        print(data)
-
         if data == 'your-move':
-            print('lalalalala')
             ge.draw()
             move = input('> ')
             while not ge.move(move):
                 move = input('> ')
-        if data == 'game-over':
+        elif data == 'game-over':
             print('Game over!')
             break
-        if data == 'server-stop':
-            print('Host broke down the connection')
+        elif data == 'server-stop':
+            print('Host has broke down the connection')
             break
 except KeyboardInterrupt:
-    print('Quitting...')
-    exit()
+    print('\nQuitting...')
+    abort()
 
 
 
