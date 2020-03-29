@@ -25,9 +25,7 @@ try:
         data = ge.network.data
 
         if data == 'your-move':
-            print('LALALALALALALAL')
             sleep(0.1)
-            # sleep(1)
             ge.update_table()
             ge.draw()
             move = input('cell index [1-9]> ')
@@ -43,8 +41,6 @@ try:
         elif data == 'server-stop':
             print('Host has broke down the connection')
             break
-        else:
-            print(data)
         sleep(0.1)
 
 except KeyboardInterrupt:

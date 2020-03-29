@@ -47,7 +47,6 @@ def send_data(data):
 def move(coord):
     if coord in network.players_table and network.players_table[int(coord) - 1].isdigit():
         network.players_table[int(coord) - 1] = network.player_symbol
-        # input(str(network.players_table))
     else:
         return False
     send_data(coord)
