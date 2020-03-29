@@ -105,6 +105,7 @@ def start(ip_address='127.0.0.1', on_port=8083):
                     else:
                         print(currtime() + colored(f'[ERROR] Received corrupted packet from player{i + 1}: {data if data != "" else "<empty>"}', 'red'))
                 update_table()
+                checkwin()
     except KeyboardInterrupt:
         stop_server(sock)
     except Exception as server_failure:
