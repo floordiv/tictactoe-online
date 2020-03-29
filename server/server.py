@@ -5,7 +5,15 @@ from time import sleep
 from termcolor import colored
 
 
+VERSION = '0.0.1'
+
 debug = False
+
+exit_color = 'magenta'
+err_color = 'red'
+info_color = 'grey'
+session_color = 'blue'
+connect_color = 'green'
 
 
 class network:
@@ -24,35 +32,38 @@ def send(data):
         conn.send(bytes(data.encode('utf-8')))
 
 
-def checkwin():
+def checkwin(sock):
     win_poses = [(0, 1, 2), (3, 4, 5), (6, 7, 8),
                  (0, 3, 6), (1, 4, 7), (2, 5, 8),
                  (0, 4, 8), (2, 4, 6)]
     for pos in win_poses:
-        players_at_areas = set([network.players_table[i] for i in pos])
+        players_at_areas = list(set([network.players_table[i] for i in pos]))
         if len(players_at_areas) == 1:
-            print(currtime() + colored(f'[SESSION] Player{1 if players_at_areas[0] == "x" else 2} has won!', 'blue'))
+            print(currtime() + colored(f'[SESSION] Player{1 if players_at_areas[0] == "x" else 2} has won!', session_color))
             send('game-over')
+            stop_server(sock, force_exit=True)
 
 
 def wait_player(sock, player_index):
     conn, addr = sock.accept()
     client_details = repr(conn.recv(1024))[2:-1]
-    print(currtime() + colored('[CONNECT] New connection from: ' + str(addr[0]) + ':' + str(addr[1]) + ' | ' + client_details, 'green'))
+    print(currtime() + colored('[CONNECT] New connection from: ' + str(addr[0]) + ':' + str(addr[1]) + ' | ' + client_details, connect_color))
     network.players += [['x', 'o'][player_index]]
     network.players_sock_objs += [conn]
     conn.send(bytes(['x', 'o'][player_index].encode('utf-8')))
 
 
-def stop_server(sock):
-    print('\n' + currtime() + colored('[EXIT] Stopping server and closing socket...', 'red'))
+def stop_server(sock, force_exit=False):
+    print('\n' + currtime() + colored('[EXIT] Stopping server and closing socket...', exit_color))
 
     try:
-        print(currtime() + colored('[EXIT] Sending stop-code to the clients', 'red'))
+        print(currtime() + colored('[EXIT] Sending stop-code to the clients', exit_color))
         send('server-stop')
     except Exception as sending_stop_code_exception:
-        print(currtime() + colored('[EXIT] Failed to send stop-code to the clients: ' + str(sending_stop_code_exception), 'red'))
+        print(currtime() + colored('[EXIT] Failed to send stop-code to the clients: ' + str(sending_stop_code_exception), exit_color))
     sock.close()
+    if force_exit:
+        exit()
 
 
 def update_table():
@@ -62,7 +73,7 @@ def update_table():
 
 
 def start(ip_address='127.0.0.1', on_port=8083):
-    print(currtime() + '[INFO] Starting server on ip: ' + ip_address + ' on port: ' + str(on_port))
+    print(f'{currtime()}[INFO] Starting server on ip: {ip_address}; on port: {on_port}; server-version: {VERSION}')
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
     try:
@@ -70,23 +81,24 @@ def start(ip_address='127.0.0.1', on_port=8083):
         sock.listen(2)
         for i in range(2):
             wait_player(sock, i)
-        print(currtime() + colored('[SESSION] Starting the game...', 'blue'))
+        print(currtime() + colored('[SESSION] Starting the game...', session_color))
         sleep(0.5)
         send('starting')
         # let the client handle with it
         sleep(0.5)
         while True:
             for i in range(2):
+                checkwin(sock)
                 client = network.players_sock_objs[i]
 
-                print(currtime() + colored('[SESSION] Next player\'s move', 'blue'))
+                print(currtime() + colored('[SESSION] Next player\'s move', session_color))
                 try:
                     client.send(b'your-move')
                     sleep(0.3)
                     # update table for clients
                     update_table()
                 except BrokenPipeError:
-                    print(currtime() + colored(f'[SESSION] Player{i + 1} has disconnected', 'blue'))
+                    print(currtime() + colored(f'[SESSION] Player{i + 1} has disconnected', session_color))
                     wait_player(sock, i)
                     print(f'{currtime()}[SESSION] Player{i + 1} has connected again')
                     client = network.players_sock_objs[i]
@@ -95,22 +107,22 @@ def start(ip_address='127.0.0.1', on_port=8083):
                 try:
                     network.players_table[int(data) - 1] = network.players[i]
                     print(
-                        currtime() + colored(f'[SESSION] Received data from player{i + 1}: {data if data != "" else "<empty>"}', 'blue'))
+                        currtime() + colored(f'[SESSION] Received data from player{i + 1}: {data if data != "" else "<empty>"}', session_color))
                 except:
                     if data == 'win':
                         send('game-over')
-                        print(currtime() + colored('[SESSION] Winner is: player' + str(i + 1), 'blue'))
+                        print(currtime() + colored('[SESSION] Winner is: player' + str(i + 1), session_color))
                         stop_server(sock)
                     else:
-                        print(currtime() + colored(f'[ERROR] Received corrupted packet from player{i + 1}: {data if data != "" else "<empty>"}', 'red'))
+                        print(currtime() + colored(f'[ERROR] Received corrupted packet from player{i + 1}: {data if data != "" else "<empty>"}', err_color))
                 update_table()
-                checkwin()
+                checkwin(sock)
     except KeyboardInterrupt:
         stop_server(sock)
     except Exception as server_failure:
         if debug:
             print(format_exc())
-        print(currtime() + colored('[SERVER-STOP] Uncaught error:' + str(server_failure), 'red'))
+        print(currtime() + colored('[SERVER-STOP] Uncaught error:' + str(server_failure), err_color))
         stop_server(sock)
 
 
