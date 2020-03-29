@@ -38,24 +38,40 @@ def start_client(server='127.0.0.1:8083'):
 
 
 def send_data(data):
-    network.sock_obj.send(bytes(str(data).encode('utf-8')))
+    try:
+        network.sock_obj.send(bytes(str(data).encode('utf-8')))
+    except BrokenPipeError:
+        print('[ERROR] Server has closed the connection')
 
 
 def move(coord):
-    if coord in network.players_table:
+    if coord in network.players_table and network.players_table[int(coord) - 1].isdigit():
         network.players_table[int(coord) - 1] = network.player_symbol
+        # input(str(network.players_table))
     else:
         return False
     send_data(coord)
     while network.data == 'your-move':
         sleep(0.3)
-    network.players_table = [i for i in network.data.split(';')]
+    update_table()
     draw()
+    return True
+
+
+def new_table_is_not_downgrade(table):
+    network_table_nums = [i for i in network.data.split(';') if i.isdigit()]
+    return len(network_table_nums) < len([i for i in table if i.isdigit()])
+
+
+def update_table():
+    sleep(0.2)
+    table = [i for i in network.data.split(';')]
+    if len(table) == 9 and not new_table_is_not_downgrade(table):
+        network.players_table = table
 
 
 def draw():
     system(cls)
-    # network.players_table = [i for i in network.data.split(';')]
     print('-' * 13)
     for i in range(9):  # lines
         if i % 3 == 0 and i not in [0, 1]:  # new line
