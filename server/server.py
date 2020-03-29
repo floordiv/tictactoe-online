@@ -94,7 +94,6 @@ def start(ip_address='127.0.0.1', on_port=8083):
                 data = repr(client.recv(1024).decode('utf-8'))[1:-1]
                 try:
                     network.players_table[int(data) - 1] = network.players[i]
-                    print(network.players_table)
                     print(
                         currtime() + colored(f'[SESSION] Received data from player{i + 1}: {data if data != "" else "<empty>"}', 'blue'))
                 except:
