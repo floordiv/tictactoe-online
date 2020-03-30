@@ -94,9 +94,10 @@ def start(ip_address='127.0.0.1', on_port=8083):
                 # checkwin(sock)
                 client = network.players_sock_objs[i]
 
-                print(currtime() + colored('[SESSION] Next player\'s move', session_color))
+                print(currtime() + colored(f'[SESSION] Player{i + 1}\'s move', session_color))
                 try:
                     client.send(b'your-move')
+                    # sleep, because client may pass it threw because of timings
                     sleep(0.3)
                     # update table for clients
                     update_table()

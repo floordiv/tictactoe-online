@@ -1,7 +1,12 @@
+import sys
 import gameengine as ge
 from threading import Thread
 from time import sleep
-from os import abort
+
+
+def abort():
+    ge.stop_listener()
+    sys.exit()
 
 
 try:
@@ -36,7 +41,6 @@ try:
                 move = input('enter valid number [1-9]> ')
         elif data.split('|')[0] == 'game-over':
             ge.draw()
-            print(ge.update_table())
             print('You won!' if ge.network.player_symbol[2:-1] == data.split('|')[1] else 'You lost!')
             abort()
         elif data.strip() == '':    # server close, it can be as a gameover

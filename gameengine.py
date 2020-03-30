@@ -22,7 +22,7 @@ def listen_client():
     while True:
         if network.stop_listener:
             network.sock_obj.close()
-            break
+            exit()
         try:
             network.data = repr(network.sock_obj.recv(1024).decode('utf-8'))[1:-1]
         except ConnectionResetError:
@@ -46,6 +46,7 @@ def send_data(data):
         network.sock_obj.send(bytes(str(data).encode('utf-8')))
     except BrokenPipeError:
         print('[ERROR] Server has closed the connection')
+        abort()
 
 
 def move(coord):
