@@ -12,6 +12,7 @@ class network:
     players_table = [str(i) for i in range(1, 10)]
     player_symbol = 'x'
     data = ''
+    stop_listener = False
 
 
 def listen_client():
@@ -19,6 +20,9 @@ def listen_client():
         print('[WARNING] Client was not started! Starting again...')
         start_client()
     while True:
+        if network.stop_listener:
+            network.sock_obj.close()
+            break
         try:
             network.data = repr(network.sock_obj.recv(1024).decode('utf-8'))[1:-1]
         except ConnectionResetError:
@@ -62,14 +66,29 @@ def new_table_is_not_downgrade(table):
     return len(network_table_nums) < len([i for i in table if i.isdigit()])
 
 
+def players_table_symbols_are_valid():
+    return len(set([len(i) for i in network.players_table])) == 1
+
+
+def fix_table():    # when player won/lost, network.player_symbol becomes byte-like (idk why)
+    if not players_table_symbols_are_valid():
+        network.players_table = [i if len(i) == 1 else i[2:-1] for i in network.players_table]
+
+
 def update_table():
     sleep(0.2)
     table = [i for i in network.data.split(';')]
     if len(table) == 9 and not new_table_is_not_downgrade(table):
         network.players_table = table
+        return True
+
+
+def stop_listener():
+    network.stop_listener = True
 
 
 def draw():
+    fix_table()
     system(cls)
     print('-' * 13)
     for i in range(9):  # lines

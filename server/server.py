@@ -40,7 +40,10 @@ def checkwin(sock):
         players_at_areas = list(set([network.players_table[i] for i in pos]))
         if len(players_at_areas) == 1:
             print(currtime() + colored(f'[SESSION] Player{1 if players_at_areas[0] == "x" else 2} has won!', session_color))
-            send('game-over')
+            update_table()
+            sleep(0.5)
+            send(f'game-over|{players_at_areas[0]}')
+            sleep(0.5)
             stop_server(sock, force_exit=True)
 
 
@@ -88,7 +91,7 @@ def start(ip_address='127.0.0.1', on_port=8083):
         sleep(0.5)
         while True:
             for i in range(2):
-                checkwin(sock)
+                # checkwin(sock)
                 client = network.players_sock_objs[i]
 
                 print(currtime() + colored('[SESSION] Next player\'s move', session_color))
@@ -109,12 +112,7 @@ def start(ip_address='127.0.0.1', on_port=8083):
                     print(
                         currtime() + colored(f'[SESSION] Received data from player{i + 1}: {data if data != "" else "<empty>"}', session_color))
                 except:
-                    if data == 'win':
-                        send('game-over')
-                        print(currtime() + colored('[SESSION] Winner is: player' + str(i + 1), session_color))
-                        stop_server(sock)
-                    else:
-                        print(currtime() + colored(f'[ERROR] Received corrupted packet from player{i + 1}: {data if data != "" else "<empty>"}', err_color))
+                    print(currtime() + colored(f'[ERROR] Received corrupted packet from player{i + 1}: {data if data != "" else "<empty>"}', err_color))
                 update_table()
                 checkwin(sock)
     except KeyboardInterrupt:

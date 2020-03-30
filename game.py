@@ -34,13 +34,20 @@ try:
                 if answer:
                     break
                 move = input('enter valid number [1-9]> ')
+        elif data.split('|')[0] == 'game-over':
             ge.draw()
-        elif data == 'game-over':
-            print('Game over!')
-            break
+            print(ge.update_table())
+            print('You won!' if ge.network.player_symbol[2:-1] == data.split('|')[1] else 'You lost!')
+            abort()
+        elif data.strip() == '':    # server close, it can be as a gameover
+            ge.draw()
+            print('You lost!')
+            abort()
         elif data == 'server-stop':
             print('Host has broke down the connection')
-            break
+            abort()
+        ge.update_table()
+        ge.draw()
         sleep(0.1)
 
 except KeyboardInterrupt:
