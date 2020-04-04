@@ -1,16 +1,24 @@
+import os
 import sys
 import gameengine as ge
-from threading import Thread
 from time import sleep
+from threading import Thread
+
+
+ip, port = '127.0.0.1', 8083
+
+
+if len(sys.argv) == 2:
+    ip, port = sys.argv[1].split(':')
 
 
 def abort():
     ge.stop_listener()
-    sys.exit()
+    os.abort()
 
 
 try:
-    ge.start_client()
+    ge.start_client(ip, port)
 except ConnectionRefusedError:
     print('[ERROR] Server is unavailable')
     exit()
@@ -28,6 +36,7 @@ try:
 
     while True:
         data = ge.network.data
+        ge.draw()
 
         if data == 'your-move':
             sleep(0.1)
@@ -41,7 +50,7 @@ try:
                 move = input('enter valid number [1-9]> ')
         elif data.split('|')[0] == 'game-over':
             ge.draw()
-            print('You won!' if ge.network.player_symbol[2:-1] == data.split('|')[1] else 'You lost!')
+            print('You won!' if ge.network.player_symbol == data.split('|')[1] else 'You lost!')
             abort()
         elif data.strip() == '':    # server close, it can be as a gameover
             ge.draw()
@@ -52,6 +61,7 @@ try:
             abort()
         elif data == 'room-closed':
             print('Room has been destroyed: second player has disconnected')
+            abort()
         ge.update_table()
         ge.draw()
         sleep(0.1)

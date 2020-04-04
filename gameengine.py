@@ -18,7 +18,7 @@ class network:
 def listen_client():
     if network.sock_obj is None:
         print('[WARNING] Client was not started! Starting again...')
-        start_client()
+        start_client('127.0.0.1', 8083)
     while True:
         if network.stop_listener:
             network.sock_obj.close()
@@ -30,10 +30,9 @@ def listen_client():
             abort()
 
 
-def start_client(server='127.0.0.1:8083'):
+def start_client(ip, port):
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    ip, port = server.split(':')
-    sock.connect((ip, int(port)))
+    sock.connect((ip, port))
     sock.send(f'client information: {platform.system()}, {platform.platform()}, {platform.processor()}'.encode('utf-8'))
     network.sock_obj = sock
     try:
@@ -98,6 +97,7 @@ def update_table():
 
 def stop_listener():
     network.stop_listener = True
+    network.sock_obj.close()
 
 
 def draw():

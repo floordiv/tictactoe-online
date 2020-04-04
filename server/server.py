@@ -5,7 +5,7 @@ from time import sleep
 from termcolor import colored
 
 
-VERSION = '0.0.1'
+VERSION = '0.1.0'
 
 debug = False
 
@@ -29,7 +29,7 @@ def currtime():
 
 def send(data):
     for conn in network.players_sock_objs:
-        conn.send(bytes(data.encode('utf-8')))
+        conn.send(data.encode('utf-8'))
 
 
 def checkwin(sock):
@@ -49,11 +49,13 @@ def checkwin(sock):
 
 def wait_player(sock, player_index):
     conn, addr = sock.accept()
-    client_details = repr(conn.recv(1024))[2:-1]
+    client_details = conn.recv(1024).decode('utf-8')
     print(currtime() + colored('[CONNECT] New connection from: ' + str(addr[0]) + ':' + str(addr[1]) + ' | ' + client_details, connect_color))
     network.players += [['x', 'o'][player_index]]
     network.players_sock_objs += [conn]
-    conn.send(bytes(['x', 'o'][player_index].encode('utf-8')))
+    conn.send(['x', 'o'][player_index].encode('utf-8'))
+    sleep(0.3)
+    conn.send('not supported by server'.encode('utf-8'))
 
 
 def stop_server(sock, force_exit=False):
@@ -72,7 +74,7 @@ def stop_server(sock, force_exit=False):
 def update_table():
     # print('updating table for clients:', ';'.join([str(i) for i in network.players_table]))
     for conn in network.players_sock_objs:
-        conn.send(bytes(';'.join([str(i) for i in network.players_table]).encode('utf-8')))
+        conn.send(';'.join([str(i) for i in network.players_table]).encode('utf-8'))
 
 
 def start(ip_address='127.0.0.1', on_port=8083):
@@ -96,7 +98,7 @@ def start(ip_address='127.0.0.1', on_port=8083):
 
                 print(currtime() + colored(f'[SESSION] Player{i + 1}\'s move', session_color))
                 try:
-                    client.send(b'your-move')
+                    client.send('your-move'.encode('utf-8'))
                     # sleep, because client may pass it threw because of timings
                     sleep(0.3)
                     # update table for clients
@@ -107,7 +109,7 @@ def start(ip_address='127.0.0.1', on_port=8083):
                     print(f'{currtime()}[SESSION] Player{i + 1} has connected again')
                     client = network.players_sock_objs[i]
 
-                data = repr(client.recv(1024).decode('utf-8'))[1:-1]
+                data = client.recv(1024).decode('utf-8')
                 try:
                     network.players_table[int(data) - 1] = network.players[i]
                     print(

@@ -9,7 +9,7 @@ from datetime import datetime
 from termcolor import colored
 from traceback import format_exc
 
-VERSION = '1.0.2'
+VERSION = '1.0.3'
 MANUAL = False  # manual server control: start, end, etc. Can be imported as module
 ASK_IP = True
 ASK_PORT = True
@@ -61,9 +61,9 @@ class data:
     listener_timeout = 0.3
     exit_color = 'magenta'
     err_color = 'red'
-    info_color = 'white'
+    info_color = 'green'
     session_color = 'blue'
-    connect_color = 'green'
+    connect_color = 'yellow'
 
 
 class room:
@@ -91,7 +91,7 @@ class room:
 
     @staticmethod
     def is_full(room_id):
-        return None not in room.find_by_id(room_id)[0:2]
+        return None not in room.get(room_id)[0:2]
 
     @staticmethod
     def players_in_room(room_id):
@@ -101,7 +101,7 @@ class room:
     def create():
         room_id = room.generate_id()
         if len(network.rooms) < network.max_rooms:
-            network.rooms += [None, None, [str(i) for i in range(1, 10)], room_id, 'not-started']
+            network.rooms.append([None, None, [str(i) for i in range(1, 10)], room_id, 'not-started'])
             return room_id
         raise Warning('max rooms count has been reached')
 
@@ -114,8 +114,9 @@ class room:
         room_obj[first_none_index] = obj
 
     @staticmethod
-    def stop(room_id):
-        net.send(room_id, 'room-closed', debug_print_on_brokenpipe=False)
+    def stop(room_id, send_code=True):
+        if send_code:
+            net.send(room_id, 'room-closed', debug_print_on_brokenpipe=False)
         network.current_players -= room.players_in_room(room_id)
         del network.rooms[room.find_by_id(room_id)]
 
@@ -147,33 +148,41 @@ class game:
             sleep(0.3)
             while True:
                 for i in range(2):
-                    conn = room.get(room_id)[i]
-                    player_is_disconnected = call(conn.send, args=('your-move'.encode('utf-8'),), errs=BrokenPipeError,
-                                                  on_catch=True)
+                    try:
+                        conn = room.get(room_id)[i]
 
-                    if player_is_disconnected:
-                        output('session', f'{room_id}: player{i + 1} has disconnected. Destroying the room...')
+                        try:
+                            conn.send('your-move'.encode('utf-8'))
+                        except BrokenPipeError:
+                            output('session', f'{room_id}: player{i + 1} has disconnected. Destroying the room...')
+                            room.stop(room_id)
+                            del data.threads[thread_index - 1]  # remove thread from threads list
+                            return   # exit from thread
+
+                        sleep(0.31)
+                        net.update_table(room_id)
+                        received = conn.recv(1024).decode('utf-8')
+
+                        if received.strip() == '':  # player has disconnected
+                            output('session', f'{room_id}#player{i + 1} has disconnected. Destroying room...')
+                            conn.send(f'game-over|{"x" if i == 0 else "o"}'.encode('utf-8'))
+
+                        packet_is_corrupted = call(game.update_table, args=(room_id, int(received) - 1, ['x', 'o'][i]),
+                                                   errs=TypeError, on_catch=True)
+                        if packet_is_corrupted:
+                            output('error', f'Received corrupted packet from {room_id}#player{i + 1}: {received if received != "" else "<empty>"}')
+                            room.stop(room_id)
+
+                        net.update_table(room_id)
+                        win_detected = game.checkwin(room_id)
+
+                        if win_detected:
+                            output('session', f'{room_id}: winner is player{i + 1}. Destroying room...')
+                            room.stop(room_id, send_code=False)
+                            del data.threads[thread_index - 1]  # remove thread from threads list
+                            return
+                    except:
                         room.stop(room_id)
-                        del data.threads[thread_index]  # remove thread from threads list
-                        return   # exit from thread
-
-                    sleep(0.3)
-                    net.update_table(room_id)
-                    received = conn.recv(1024).decode('utf-8')
-                    packet_is_corrupted = call(game.update_table, args=(room_id, int(received), ['x', 'o'][i]),
-                                               errs=TypeError, on_catch=True)
-                    if packet_is_corrupted:
-                        output('error', f'Received corrupted packet from {room_id}#player{i + 1}: {received if received != "" else "<empty>"}')
-                        room.stop(room_id)
-
-                    net.update_table(room_id)
-                    win_detected = game.checkwin(room_id)
-
-                    if win_detected:
-                        output('session', f'{room_id}: winner is player{i + 1}. Destroying room...')
-                        room.stop(room_id)
-                        del data.threads[thread_index]  # remove thread from threads list
-                        return
 
 
 class server:
@@ -197,7 +206,6 @@ class server:
             while True:
                 if network.current_players < network.max_players and len(network.rooms) < network.max_rooms:
                     conn, addr = network.sock.accept()
-                    network.current_players += 1
                     client_details = conn.recv(1024).decode('utf-8')
                     output('connect', f'New connection from {addr[0]}:{addr[1]}, {client_details}')
 
@@ -209,8 +217,13 @@ class server:
                             conn.send('disconnected'.encode('utf-8'))
 
                             continue
+
+                        output('info', 'Created new room:', room_id)
                     else:
-                        room_id = room.get_free()
+                        room_id = room.get_free()[3]
+                        output('info', 'Adding player to the existing room:', room_id)
+
+                    network.current_players += 1
 
                     player_letter = ['x', 'o'][room.players_in_room(room_id)]
                     room.add_player(room_id, conn)
@@ -250,10 +263,11 @@ class net:
         if len(args) == 1:  # broadcast
             for each in [i[0:2] for i in network.rooms]:
                 for conn in each:
-                    conn.send(args[0].encode('utf-8'))
+                    if conn is not None:
+                        call(conn.send, args=(args[0].encode('utf-8'),), errs=BrokenPipeError)
         else:   # send to both clients
             room_id, data_to_send = args
-            for index, conn in enumerate([i[0:2] for i in room.get(room_id)]):
+            for index, conn in enumerate([i for i in room.get(room_id)[0:2]]):
                 try:
                     conn.send(bytes(data_to_send.encode('utf-8')))
                 except BrokenPipeError:
