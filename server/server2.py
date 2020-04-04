@@ -135,6 +135,7 @@ class game:
             players_at_areas = list(set([room.get(room_id)[2][i] for i in pos]))
             if len(players_at_areas) == 1:
                 # win
+                sleep(0.3)
                 net.send(room_id, 'game-over|' + players_at_areas[0])
                 return True
         return False
