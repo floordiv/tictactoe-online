@@ -9,7 +9,7 @@ from datetime import datetime
 from termcolor import colored
 from traceback import format_exc
 
-VERSION = '1.0.1'
+VERSION = '1.0.2'
 MANUAL = False  # manual server control: start, end, etc. Can be imported as module
 ASK_IP = True
 ASK_PORT = True
@@ -26,7 +26,7 @@ def output(*text, splitter=' '):
     currtime = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     if text[0] in out_types:
         color = out_types[text[0]]
-        print(colored(f'[{currtime}] [{str(text[0]).upper()}] {splitter.join([str(i) for i in text[1:]])}'), color)
+        print(colored(f'[{currtime}] [{str(text[0]).upper()}] {splitter.join([str(i) for i in text[1:]])}', color))
     else:
         print(f'[{currtime}]', splitter.join([str(i) for i in text]))
 
@@ -232,7 +232,7 @@ class server:
 
     @staticmethod
     def stop():
-        output('exit', 'Sending stop-code to players...')
+        output('exit', '\nSending stop-code to players...')
         net.send('server-stop')
         output('exit', 'Closing socket...')
         network.sock.close()
