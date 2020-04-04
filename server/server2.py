@@ -17,13 +17,18 @@ DEFAULT_IP = '127.0.0.1'
 DEFAULT_PORT = 8083
 
 
-def output(*text, splitter=' '):
+def output(*text, splitter=' ', at_newline=False):
+    if at_newline:
+        print()
+
     out_types = {'info': data.info_color,
                  'exit': data.exit_color,
                  'error': data.err_color,
                  'session': data.session_color,
                  'connect': data.connect_color}
+
     currtime = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
     if text[0] in out_types:
         color = out_types[text[0]]
         print(colored(f'[{currtime}] [{str(text[0]).upper()}] {splitter.join([str(i) for i in text[1:]])}', color))
@@ -56,7 +61,7 @@ class data:
     listener_timeout = 0.3
     exit_color = 'magenta'
     err_color = 'red'
-    info_color = 'grey'
+    info_color = 'white'
     session_color = 'blue'
     connect_color = 'green'
 
@@ -232,7 +237,7 @@ class server:
 
     @staticmethod
     def stop():
-        output('exit', '\nSending stop-code to players...')
+        output('exit', 'Sending stop-code to players...', at_newline=True)
         net.send('server-stop')
         output('exit', 'Closing socket...')
         network.sock.close()
