@@ -24,7 +24,7 @@ def listen_client():
             network.sock_obj.close()
             exit()
         try:
-            network.data = repr(network.sock_obj.recv(1024).decode('utf-8'))[1:-1]
+            network.data = network.sock_obj.recv(1024).decode('utf-8')
         except ConnectionResetError:
             print('[ERROR] Server reset connection')
             abort()
@@ -36,14 +36,22 @@ def start_client(server='127.0.0.1:8083'):
     sock.connect((ip, int(port)))
     sock.send(bytes(f'client information: {platform.system()}, {platform.platform()}, {platform.processor()}'.encode('utf-8')))
     network.sock_obj = sock
-    network.player_symbol = repr(sock.recv(1024))
+    try:
+        network.player_symbol = repr(sock.recv(1024))
+    except ConnectionRefusedError:
+        print('[ERROR] Server refused connection')
+        exit()
+    try:
+        print('[SESSION] Room id:', repr(sock.recv(1024).decode('utf-8')))
+    except KeyboardInterrupt:
+        abort()
 
     return sock
 
 
 def send_data(data):
     try:
-        network.sock_obj.send(bytes(str(data).encode('utf-8')))
+        network.sock_obj.send(str(data).encode('utf-8'))
     except BrokenPipeError:
         print('[ERROR] Server has closed the connection')
         abort()

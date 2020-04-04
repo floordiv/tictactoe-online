@@ -50,6 +50,8 @@ try:
         elif data == 'server-stop':
             print('Host has broke down the connection')
             abort()
+        elif data == 'room-closed':
+            print('Room has been destroyed: second player has disconnected')
         ge.update_table()
         ge.draw()
         sleep(0.1)
