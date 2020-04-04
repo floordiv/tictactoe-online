@@ -190,14 +190,23 @@ class server:
 
         try:
             while True:
-                if network.current_players < network.max_players:
+                if network.current_players < network.max_players and len(network.rooms) < network.max_rooms:
                     conn, addr = network.sock.accept()
+                    network.current_players += 1
                     client_details = conn.recv(1024).decode('utf-8')
                     output('connect', f'New connection from {addr[0]}:{addr[1]}, {client_details}')
+
                     if network.current_players % 2 == 0:    # create new room
-                        room_id = room.create()
+                        room_id = call(room.create, errs=Warning, on_catch=None)
+
+                        if room_id is None:     # max rooms count has been reached
+                            # it shouldn't happen because of if expression, but everything is possible
+                            conn.send('disconnected'.encode('utf-8'))
+
+                            continue
                     else:
                         room_id = room.get_free()
+
                     player_letter = ['x', 'o'][room.players_in_room(room_id)]
                     room.add_player(room_id, conn)
                     conn.send(player_letter.encode('utf-8'))

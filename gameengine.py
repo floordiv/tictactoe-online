@@ -34,15 +34,19 @@ def start_client(server='127.0.0.1:8083'):
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     ip, port = server.split(':')
     sock.connect((ip, int(port)))
-    sock.send(bytes(f'client information: {platform.system()}, {platform.platform()}, {platform.processor()}'.encode('utf-8')))
+    sock.send(f'client information: {platform.system()}, {platform.platform()}, {platform.processor()}'.encode('utf-8'))
     network.sock_obj = sock
     try:
-        network.player_symbol = repr(sock.recv(1024))
+        network.player_symbol = sock.recv(1024).decode('utf-8')
+
+        if network.player_symbol == 'disconnected':
+            print('[ERROR] Disconnected by server')
+            exit()
     except ConnectionRefusedError:
         print('[ERROR] Server refused connection')
         exit()
     try:
-        print('[SESSION] Room id:', repr(sock.recv(1024).decode('utf-8')))
+        print('[SESSION] Room id:', sock.recv(1024).decode('utf-8'))
     except KeyboardInterrupt:
         abort()
 
