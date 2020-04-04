@@ -16,10 +16,11 @@ on_catch may be any type
 
 
 def call(func, args=(), kwargs={}, errs=(), on_catch=None):
-    if len(errs) == 0:
-        return func()
     if not isinstance(errs, tuple) and not isinstance(errs, list):
         errs = (errs,)
+
+    if len(errs) == 0:
+        return func()
 
     try:
         return func(*args, **kwargs)

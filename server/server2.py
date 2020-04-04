@@ -9,7 +9,7 @@ from datetime import datetime
 from termcolor import colored
 from traceback import format_exc
 
-VERSION = '1.0.0'
+VERSION = '1.0.1'
 MANUAL = False  # manual server control: start, end, etc. Can be imported as module
 ASK_IP = True
 ASK_PORT = True
