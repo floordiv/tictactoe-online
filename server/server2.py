@@ -9,7 +9,7 @@ from datetime import datetime
 from termcolor import colored
 from traceback import format_exc
 
-VERSION = '1.0.3'
+VERSION = '1.0.4'
 MANUAL = False  # manual server control: start, end, etc. Can be imported as module
 ASK_IP = True
 ASK_PORT = True
@@ -56,7 +56,7 @@ class network:
 
 
 class data:
-    threads = []
+    threads = 0
     debug = True
     listener_timeout = 0.3
     exit_color = 'magenta'
@@ -161,7 +161,7 @@ class game:
                         except BrokenPipeError:
                             output('session', f'{room_id}: player{i + 1} has disconnected. Destroying the room...')
                             room.stop(room_id)
-                            del data.threads[thread_index - 1]  # remove thread from threads list
+                            data.threads -= 1
                             return   # exit from thread
 
                         sleep(0.31)
@@ -184,7 +184,7 @@ class game:
                         if win_detected:
                             output('session', f'{room_id}: winner is player{i + 1}. Destroying room...')
                             room.stop(room_id, send_code=False)
-                            del data.threads[thread_index - 1]  # remove thread from threads list
+                            data.threads -= 1
                             return
                     except:
                         room.stop(room_id)
@@ -245,9 +245,8 @@ class server:
 
                         output('info', 'Starting room:', room_id)
 
-                        room_thread = Thread(target=game.start, args=(room_id,),
-                                             kwargs={'thread_index': len(data.threads) + 1}, daemon=True)
-                        data.threads += [room_thread]
+                        room_thread = Thread(target=game.start, args=(room_id,), daemon=True)
+                        data.threads += 1
                         room.set_status(room_id, 'running')
                         room_thread.start()
 
