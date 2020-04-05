@@ -50,11 +50,12 @@ try:
                 move = input('enter valid number [1-9]> ')
         elif data.split('|')[0] == 'game-over':
             ge.draw()
-            print('You won!' if ge.network.player_symbol == data.split('|')[1] else 'You lost!')
+            winner = data.split('|')[1]
+            print('You won!' if ge.network.player_symbol == winner else 'You lost!' if len(winner) == 1 else 'Draw!')
             abort()
         elif data.strip() == '':    # server close, it can be as a gameover
             ge.draw()
-            print('You lost!')
+            print('You lostrgegr!')
             abort()
         elif data == 'server-stop':
             print('Host has broke down the connection')

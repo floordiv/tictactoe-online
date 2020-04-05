@@ -9,7 +9,7 @@ from datetime import datetime
 from termcolor import colored
 from traceback import format_exc
 
-VERSION = '1.0.4'
+VERSION = '1.1.5'
 MANUAL = False  # manual server control: start, end, etc. Can be imported as module
 ASK_IP = True
 ASK_PORT = True
@@ -122,6 +122,7 @@ class room:
         if send_code:
             net.send(room_id, 'room-closed', debug_print_on_brokenpipe=False)
         network.current_players -= room.players_in_room(room_id)
+        data.threads -= 1
         del network.rooms[room.find_by_id(room_id)]
 
 
@@ -135,6 +136,11 @@ class game:
         win_poses = [(0, 1, 2), (3, 4, 5), (6, 7, 8),
                      (0, 3, 6), (1, 4, 7), (2, 5, 8),
                      (0, 4, 8), (2, 4, 6)]
+        free_cells = [i for i in room.get(room_id)[2] if i.isdigit()]
+        if len(free_cells) == 0:    # draw
+            sleep(0.3)
+            net.send(room_id, 'game-over|draw')
+            return True
         for pos in win_poses:
             players_at_areas = list(set([room.get(room_id)[2][i] for i in pos]))
             if len(players_at_areas) == 1:
@@ -154,14 +160,19 @@ class game:
             while True:
                 for i in range(2):
                     try:
-                        conn = room.get(room_id)[i]
+                        conn = call(room.get, args=(room_id,), errs=Warning)
+
+                        if conn is None:
+                            output('error', 'Trying to get not existing room:', room_id)
+                            return
+
+                        conn = conn[i]
 
                         try:
                             conn.send('your-move'.encode('utf-8'))
                         except BrokenPipeError:
                             output('session', f'{room_id}: player{i + 1} has disconnected. Destroying the room...')
                             room.stop(room_id)
-                            data.threads -= 1
                             return   # exit from thread
 
                         sleep(0.31)
@@ -183,8 +194,8 @@ class game:
 
                         if win_detected:
                             output('session', f'{room_id}: winner is player{i + 1}. Destroying room...')
+                            sleep(0.3)
                             room.stop(room_id, send_code=False)
-                            data.threads -= 1
                             return
                     except:
                         room.stop(room_id)
