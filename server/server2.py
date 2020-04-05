@@ -75,7 +75,7 @@ class room:
     def find_by_id(room_id):
         room_obj = [i for i in network.rooms if i[3] == room_id]
         if len(room_obj) == 0:
-            raise Warning('room not found')
+            raise Warning('room not found: ' + room_id)
         return network.rooms.index(room_obj[0])     # returns index of the room
 
     @staticmethod
@@ -112,6 +112,10 @@ class room:
             raise Warning('room is already full')
         first_none_index = room_obj.index(None)     # if there is one player, the second will be placed
         room_obj[first_none_index] = obj
+
+    @staticmethod
+    def set_status(room_id, new_status):
+        room.get(room_id)[4] = new_status
 
     @staticmethod
     def stop(room_id, send_code=True):
@@ -232,10 +236,11 @@ class server:
                     sleep(0.3)
                     conn.send(room_id.encode('utf-8'))
 
-                    not_started_rooms = [i for i in network.rooms if i[4] == 'not-started']
+                    not_started_rooms = [i for i in network.rooms if i[4] == 'not-started' and room.is_full(i[3])]
 
                     # start all rooms
                     for not_started_room in not_started_rooms:
+
                         room_id = not_started_room[3]
 
                         output('info', 'Starting room:', room_id)
@@ -243,6 +248,7 @@ class server:
                         room_thread = Thread(target=game.start, args=(room_id,),
                                              kwargs={'thread_index': len(data.threads) + 1}, daemon=True)
                         data.threads += [room_thread]
+                        room.set_status(room_id, 'running')
                         room_thread.start()
 
                 sleep(data.listener_timeout)
