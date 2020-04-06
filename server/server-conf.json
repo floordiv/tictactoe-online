@@ -1,1 +1,1 @@
-[{"network": {"max_players": 5, "max_rooms": 6, "room_id_len": 6}, "data": {"debug": true}}]
+[{"network": {"max_players": 5, "max_rooms": 6, "room_id_len": 6, "max_move_time": 5}, "data": {"debug": true}}]

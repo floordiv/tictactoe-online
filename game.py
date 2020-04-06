@@ -5,7 +5,7 @@ from time import sleep
 from threading import Thread
 
 
-VERSION = '1.1.0'
+VERSION = '1.2.0'
 
 
 ip, port = '127.0.0.1', 8083
@@ -37,10 +37,6 @@ try:
             print('[ERROR] Server is unavailable')
             abort()
         sleep(0.3)
-
-        # if server will fail while waiting for a second player, BrokenPipeError will be raised and
-        # handled by the engine
-        # ge.send_data(' ')
 
     print('Starting the game!')
     ge.draw()

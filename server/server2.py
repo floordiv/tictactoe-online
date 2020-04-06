@@ -16,7 +16,7 @@ ASK_IP = True
 ASK_PORT = True
 DEFAULT_IP = '127.0.0.1'
 DEFAULT_PORT = 8083
-USE_EXTERNAL_CONFIG = '--use-config' in sys.argv
+USE_EXTERNAL_CONFIG = '--use-config' in sys.argv    # used for testing, but you can modify default config
 EXTERNAL_CONFIG = 'server-conf.json'
 
 
@@ -54,6 +54,7 @@ class network:
     current_players = 0
     max_rooms = 6
     room_id_len = 6
+    max_move_time = 10  # seconds. None for infinity
 
     sock = None
 
@@ -164,6 +165,15 @@ class game:
             sleep(0.3)
             net.send(room_id, 'starting')
             sleep(0.4)
+
+            if network.max_move_time is not None:
+                for player in room.get(room_id)[0:2]:
+                    player.settimeout(network.max_move_time)
+                net.send(room_id, f'Time per move is limited: {network.max_move_time} seconds')
+                sleep(0.3)
+            else:
+                net.send('<empty>')
+
             while True:
                 for i in range(2):
                     try:
@@ -185,7 +195,15 @@ class game:
 
                         sleep(0.31)
                         net.update_table(room_id)
-                        received = conn.recv(1024).decode('utf-8')
+
+                        try:
+                            received = conn.recv(1024).decode('utf-8')
+                        except socket.timeout:
+                            output('session', f'{room_id}#player{i + 1} is not responding for a long time. Destroying '
+                                              'the room...')
+                            net.send(room_id, 'game-over|' + 'x' if i == 1 else 'o')
+                            room.stop(room_id, send_code=False)
+                            return
 
                         if received.strip() in ['', 'disconnected']:  # player has disconnected
                             output('session', f'{room_id}#player{i + 1} has disconnected. Destroying room...')
@@ -237,7 +255,7 @@ class server:
                         # let it be (don't hit me too much)
                         setattr(eval(conf_type), var, network_vars[var])
 
-            output('info', f'Loading settings from {EXTERNAL_CONFIG} has benn completed')
+            output('info', f'Loading settings from {EXTERNAL_CONFIG} has been completed')
 
         sock_is_in_use = call(network.sock.bind, args=((ip, port),), errs=OSError, on_catch=True)
         if sock_is_in_use:

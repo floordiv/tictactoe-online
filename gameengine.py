@@ -72,11 +72,15 @@ def move(coord):
         network.players_table[int(coord) - 1] = network.player_symbol
     else:
         return False
+
     send_data(coord)
+
     while network.data == 'your-move':
         sleep(0.3)
+
     update_table()
     draw()
+
     return True
 
 
