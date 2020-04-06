@@ -14,6 +14,8 @@ class network:
     data = ''
     stop_listener = False
 
+    server_test_codes = ['disconnect-check']
+
 
 def listen_client():
     if network.sock_obj is None:
@@ -24,7 +26,9 @@ def listen_client():
             network.sock_obj.close()
             exit()
         try:
-            network.data = network.sock_obj.recv(1024).decode('utf-8')
+            data = network.sock_obj.recv(1024).decode('utf-8')
+            if data not in network.server_test_codes:
+                network.data = data
         except ConnectionResetError:
             print('[ERROR] Server reset connection')
             abort()
@@ -41,6 +45,9 @@ def start_client(ip, port):
         if network.player_symbol == 'disconnected':
             print('[ERROR] Disconnected by server')
             exit()
+        elif network.player_symbol == 'server-is-busy':
+            print('[ERROR] Server is unavailable now, please, try to connect later')
+            abort()
     except ConnectionRefusedError:
         print('[ERROR] Server refused connection')
         exit()

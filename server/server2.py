@@ -1,4 +1,5 @@
 import sys
+import json
 import socket
 import string
 from time import sleep
@@ -9,12 +10,14 @@ from datetime import datetime
 from termcolor import colored
 from traceback import format_exc
 
-VERSION = '1.1.6'
+VERSION = '1.3.6'
 MANUAL = False  # manual server control: start, end, etc. Can be imported as module
 ASK_IP = True
 ASK_PORT = True
 DEFAULT_IP = '127.0.0.1'
 DEFAULT_PORT = 8083
+USE_EXTERNAL_CONFIG = '--use-config' in sys.argv
+EXTERNAL_CONFIG = 'server-conf.json'
 
 
 def output(*text, splitter=' ', at_newline=False):
@@ -114,6 +117,10 @@ class room:
         room_obj[first_none_index] = obj
 
     @staticmethod
+    def remove_player(room_id, player_index):
+        room.get(room_id)[player_index] = None
+
+    @staticmethod
     def set_status(room_id, new_status):
         room.get(room_id)[4] = new_status
 
@@ -151,12 +158,12 @@ class game:
         return False
 
     @staticmethod
-    def start(room_id, thread_index=-1):
+    def start(room_id):
         # TODO: listen both clients at the moment
         if room.is_full(room_id):   # run
             sleep(0.3)
             net.send(room_id, 'starting')
-            sleep(0.3)
+            sleep(0.4)
             while True:
                 for i in range(2):
                     try:
@@ -187,7 +194,7 @@ class game:
                             return
 
                         packet_is_corrupted = call(game.update_table, args=(room_id, int(received) - 1, ['x', 'o'][i]),
-                                                   errs=TypeError, on_catch=True)
+                                                   errs=(TypeError, ValueError), on_catch=True)
                         if packet_is_corrupted:
                             output('error', f'Received corrupted packet from {room_id}#player{i + 1}: {received if received != "" else "<empty>"}')
                             room.stop(room_id)
@@ -203,6 +210,8 @@ class game:
                             return
                     except Exception as debug_info:
                         output('error', f'An error occurred for {room_id}#player{i + 1}: {debug_info}')
+                        if data.debug:
+                            print(colored(format_exc(), data.err_color))
                         room.stop(room_id)
                         return
 
@@ -213,6 +222,22 @@ class server:
         output('info', f'Tic Tac Toe Online server, version {VERSION}. Starting...')
         network.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         output('info', f'Using ip:port: {ip}:{port}')
+        if USE_EXTERNAL_CONFIG:
+            output('info', f'Using external config: {EXTERNAL_CONFIG}. Loading config...')
+
+            with open(EXTERNAL_CONFIG, 'r') as conf:
+                conf = json.load(conf)[0]
+
+            for conf_type in ['network', 'data']:
+                if conf_type in conf:
+                    network_vars = conf[conf_type]
+
+                    for var in network_vars:
+                        # I know, that using eval is a shitcode. But, I wanted to do it by only the one loop, so...
+                        # let it be (don't hit me too much)
+                        setattr(eval(conf_type), var, network_vars[var])
+
+            output('info', f'Loading settings from {EXTERNAL_CONFIG} has benn completed')
 
         sock_is_in_use = call(network.sock.bind, args=((ip, port),), errs=OSError, on_catch=True)
         if sock_is_in_use:
@@ -226,8 +251,11 @@ class server:
 
         try:
             while True:
+                conn, addr = network.sock.accept()
+
+                net.remove_disconnected_players()
+
                 if network.current_players < network.max_players and len(network.rooms) < network.max_rooms:
-                    conn, addr = network.sock.accept()
                     client_details = conn.recv(1024).decode('utf-8')
                     output('connect', f'New connection from {addr[0]}:{addr[1]}, {client_details}')
 
@@ -247,11 +275,18 @@ class server:
 
                     network.current_players += 1
 
-                    player_letter = ['x', 'o'][room.players_in_room(room_id)]
-                    room.add_player(room_id, conn)
-                    conn.send(player_letter.encode('utf-8'))
-                    sleep(0.3)
-                    conn.send(room_id.encode('utf-8'))
+                    try:
+                        player_letter = ['x', 'o'][room.players_in_room(room_id)]
+                        room.add_player(room_id, conn)
+                        conn.send(player_letter.encode('utf-8'))
+                        sleep(0.3)
+                        conn.send(room_id.encode('utf-8'))
+                    except BrokenPipeError:
+                        players_in_room = room.players_in_room(room_id)
+                        if players_in_room == 2:
+                            new_room_id_for_player = room.create()
+                            room.add_player(new_room_id_for_player, room.get(new_room_id_for_player)[0])
+                        room.stop(room_id)
 
                     not_started_rooms = [i for i in network.rooms if i[4] == 'not-started' and room.is_full(i[3])]
 
@@ -266,6 +301,9 @@ class server:
                         data.threads += 1
                         room.set_status(room_id, 'running')
                         room_thread.start()
+                else:
+                    conn.send('server-is-busy'.encode('utf-8'))
+                    conn.close()
 
                 sleep(data.listener_timeout)
         except KeyboardInterrupt:
@@ -301,6 +339,22 @@ class net:
     @staticmethod
     def update_table(room_id):
         net.send(room_id, ';'.join(room.get(room_id)[2]))
+
+    @staticmethod
+    def remove_disconnected_players():
+        disconnected = 0
+        output('info', 'Removing disconnected players...')
+
+        for _room in network.rooms:
+            for index, player in enumerate(_room[0:2]):
+                if player is not None:
+                    try:
+                        player.send('disconnect-check'.encode('utf-8'))
+                    except BrokenPipeError:  # found a disconnected player
+                        disconnected += 1
+                        output('info', f'Disconnecting {_room[3]}#player{index + 1}...')
+                        room.remove_player(_room[3], index)
+        return disconnected
 
 
 if not MANUAL:
