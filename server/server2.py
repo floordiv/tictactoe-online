@@ -54,7 +54,7 @@ class network:
     current_players = 0
     max_rooms = 6
     room_id_len = 6
-    max_move_time = 10  # seconds. None for infinity
+    max_move_time = 60  # seconds. None for infinity
 
     sock = None
 
