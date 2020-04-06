@@ -13,6 +13,7 @@ if len(sys.argv) == 2:
 
 
 def abort():
+    ge.send_data('disconnected')
     ge.stop_listener()
     os.abort()
 
@@ -55,7 +56,7 @@ try:
             abort()
         elif data.strip() == '':    # server close, it can be as a gameover
             ge.draw()
-            print('You lostrgegr!')
+            print('Disconnected')
             abort()
         elif data == 'server-stop':
             print('Host has broke down the connection')

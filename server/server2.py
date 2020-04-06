@@ -9,7 +9,7 @@ from datetime import datetime
 from termcolor import colored
 from traceback import format_exc
 
-VERSION = '1.1.5'
+VERSION = '1.1.6'
 MANUAL = False  # manual server control: start, end, etc. Can be imported as module
 ASK_IP = True
 ASK_PORT = True
@@ -50,7 +50,7 @@ class network:
     max_players = 10
     current_players = 0
     max_rooms = 6
-    room_id_len = 5
+    room_id_len = 6
 
     sock = None
 
@@ -164,6 +164,7 @@ class game:
 
                         if conn is None:
                             output('error', 'Trying to get not existing room:', room_id)
+                            room.stop(room_id)
                             return
 
                         conn = conn[i]
@@ -179,15 +180,18 @@ class game:
                         net.update_table(room_id)
                         received = conn.recv(1024).decode('utf-8')
 
-                        if received.strip() == '':  # player has disconnected
+                        if received.strip() in ['', 'disconnected']:  # player has disconnected
                             output('session', f'{room_id}#player{i + 1} has disconnected. Destroying room...')
                             conn.send(f'game-over|{"x" if i == 0 else "o"}'.encode('utf-8'))
+                            room.stop(room_id)
+                            return
 
                         packet_is_corrupted = call(game.update_table, args=(room_id, int(received) - 1, ['x', 'o'][i]),
                                                    errs=TypeError, on_catch=True)
                         if packet_is_corrupted:
                             output('error', f'Received corrupted packet from {room_id}#player{i + 1}: {received if received != "" else "<empty>"}')
                             room.stop(room_id)
+                            return
 
                         net.update_table(room_id)
                         win_detected = game.checkwin(room_id)
@@ -197,8 +201,10 @@ class game:
                             sleep(0.3)
                             room.stop(room_id, send_code=False)
                             return
-                    except:
+                    except Exception as debug_info:
+                        output('error', f'An error occurred for {room_id}#player{i + 1}: {debug_info}')
                         room.stop(room_id)
+                        return
 
 
 class server:
@@ -269,6 +275,7 @@ class server:
     def stop():
         output('exit', 'Sending stop-code to players...', at_newline=True)
         net.send('server-stop')
+        sleep(0.31)
         output('exit', 'Closing socket...')
         network.sock.close()
         sys.exit()
