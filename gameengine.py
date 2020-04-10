@@ -29,6 +29,8 @@ def listen_client():
             data = network.sock_obj.recv(1024).decode('utf-8')
             if data not in network.server_test_codes:
                 network.data = data
+            else:
+                network.sock_obj.send('echo'.encode('utf-8'))
         except ConnectionResetError:
             print('[ERROR] Server reset connection')
             abort()

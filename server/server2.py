@@ -10,7 +10,7 @@ from datetime import datetime
 from termcolor import colored
 from traceback import format_exc
 
-VERSION = '1.3.6'
+VERSION = '1.3.7'
 MANUAL = False  # manual server control: start, end, etc. Can be imported as module
 ASK_IP = True
 ASK_PORT = True
@@ -92,6 +92,7 @@ class room:
         for _room in network.rooms:
             if None in _room[0:2]:
                 return _room
+        return None
 
     @staticmethod
     def is_full(room_id):
@@ -169,8 +170,6 @@ class game:
             if network.max_move_time is not None:
                 for player in room.get(room_id)[0:2]:
                     player.settimeout(network.max_move_time)
-                net.send(room_id, f'Time per move is limited: {network.max_move_time} seconds')
-                sleep(0.3)
             else:
                 net.send('<empty>')
 
@@ -223,7 +222,7 @@ class game:
 
                         if win_detected:
                             output('session', f'{room_id}: winner is player{i + 1}. Destroying room...')
-                            sleep(0.3)
+                            sleep(0.31)
                             room.stop(room_id, send_code=False)
                             return
                     except Exception as debug_info:
@@ -277,7 +276,9 @@ class server:
                     client_details = conn.recv(1024).decode('utf-8')
                     output('connect', f'New connection from {addr[0]}:{addr[1]}, {client_details}')
 
-                    if network.current_players % 2 == 0:    # create new room
+                    free_room = room.get_free()
+
+                    if free_room is None:    # create new room
                         room_id = call(room.create, errs=Warning, on_catch=None)
 
                         if room_id is None:     # max rooms count has been reached
@@ -288,7 +289,7 @@ class server:
 
                         output('info', 'Created new room:', room_id)
                     else:
-                        room_id = room.get_free()[3]
+                        room_id = free_room[3]
                         output('info', 'Adding player to the existing room:', room_id)
 
                     network.current_players += 1
@@ -368,7 +369,10 @@ class net:
                 if player is not None:
                     try:
                         player.send('disconnect-check'.encode('utf-8'))
-                    except BrokenPipeError:  # found a disconnected player
+                        player.settimeout(0.5)
+                        player.recv(1024).decode('utf-8')
+                        player.settimeout(network.max_move_time)
+                    except (BrokenPipeError, socket.timeout):  # found a disconnected player
                         disconnected += 1
                         output('info', f'Disconnecting {_room[3]}#player{index + 1}...')
                         room.remove_player(_room[3], index)
